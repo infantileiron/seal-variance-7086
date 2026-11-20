@@ -23,3 +23,7 @@ class AssessmentInput(BaseModel):
 class RecommendationInput(BaseModel):
     selected_process_id:int=Field(gt=0)
     recommendation:str=Field(min_length=20,max_length=3000)
+class MixBoundInput(BaseModel):
+    lot:str=Field(min_length=1,max_length=60)
+    lower:float=Field(ge=0,le=1,allow_inf_nan=False)
+    upper:float=Field(ge=0,le=1,allow_inf_nan=False)

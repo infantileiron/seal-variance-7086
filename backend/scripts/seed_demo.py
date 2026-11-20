@@ -2,7 +2,7 @@ import random,json
 from datetime import datetime,timezone
 from sqlalchemy import select,func
 from src.config.database import Base,engine,SessionLocal
-from src.models.entities import User,Process,Sample,Assessment
+from src.models.entities import User,Process,Sample,Assessment,MixBound
 from src.utils.security import hash_password
 from src.services.assessments import snapshot_for
 
@@ -21,9 +21,20 @@ def seed():
                 code=f'HC-S{j}-{i+1:03}';value=round(max(1,rng.gauss(mean,1.7)),2)
                 if not db.scalar(select(Sample).where(Sample.code==code)):db.add(Sample(code=code,process_id=process.id,lot='HC-1115',force=value,flagged=i==0,note='首件标记，保留纳入分析' if i==0 else ''))
         db.commit()
+        for j,mean in enumerate([23.4,23.1,25.2],1):
+            process=db.scalar(select(Process).where(Process.code==f'HC-S{j}'))
+            for i in range(15):
+                code=f'HC-S{j}-2{i+1:02}';value=round(max(1,rng.gauss(mean,1.5)),2)
+                if not db.scalar(select(Sample).where(Sample.code==code)):db.add(Sample(code=code,process_id=process.id,lot='HC-1116',force=value,flagged=False,note='第二批订单材料，用于配比敏感性'))
+        db.commit()
         title='HC-1115 三方案首轮复核'
         if not db.scalar(select(Assessment).where(Assessment.title==title)):
             ids=db.scalars(select(Process.id).where(Process.code.in_(['HC-S1','HC-S2','HC-S3'])).order_by(Process.id)).all()
             db.add(Assessment(title=title,lot='HC-1115',snapshot=snapshot_for(db,ids,'HC-1115'),status='queued',created_at=datetime.now(timezone.utc).isoformat()));db.commit()
-        counts={t.__tablename__:db.scalar(select(func.count()).select_from(t)) for t in [User,Process,Sample,Assessment]};print(json.dumps(counts));return counts
+        first=db.scalar(select(Assessment).where(Assessment.title==title))
+        if first:
+            for lot,lower,upper in [('HC-1115',.3,.8),('HC-1116',.2,.7)]:
+                if not db.scalar(select(MixBound).where(MixBound.assessment_id==first.id,MixBound.lot==lot)):db.add(MixBound(assessment_id=first.id,lot=lot,lower=lower,upper=upper,updated_by='seed',updated_at=datetime.now(timezone.utc).isoformat()))
+            db.commit()
+        counts={t.__tablename__:db.scalar(select(func.count()).select_from(t)) for t in [User,Process,Sample,Assessment,MixBound]};print(json.dumps(counts));return counts
 if __name__=='__main__':seed()

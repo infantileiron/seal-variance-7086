@@ -1,4 +1,4 @@
-from sqlalchemy import String,Float,Boolean,Integer,ForeignKey,JSON,Text
+from sqlalchemy import String,Float,Boolean,Integer,ForeignKey,JSON,Text,UniqueConstraint
 from sqlalchemy.orm import Mapped,mapped_column
 from src.config.database import Base
 class User(Base):
@@ -46,3 +46,36 @@ class Audit(Base):
     action:Mapped[str]=mapped_column(String(200))
     status:Mapped[int]=mapped_column(Integer)
     created_at:Mapped[str]=mapped_column(String(40))
+class MixBound(Base):
+    __tablename__='mix_bounds'
+    __table_args__=(UniqueConstraint('assessment_id','lot'),)
+    id:Mapped[int]=mapped_column(primary_key=True)
+    assessment_id:Mapped[int]=mapped_column(ForeignKey('assessments.id'))
+    lot:Mapped[str]=mapped_column(String(60))
+    lower:Mapped[float]=mapped_column(Float)
+    upper:Mapped[float]=mapped_column(Float)
+    updated_by:Mapped[str]=mapped_column(String(120),default='')
+    updated_at:Mapped[str]=mapped_column(String(40),default='')
+class MixStudy(Base):
+    __tablename__='mix_studies'
+    id:Mapped[int]=mapped_column(primary_key=True)
+    assessment_id:Mapped[int]=mapped_column(ForeignKey('assessments.id'))
+    status:Mapped[str]=mapped_column(String(20),default='queued')
+    input_fingerprint:Mapped[str]=mapped_column(String(64),default='')
+    result:Mapped[dict|None]=mapped_column(JSON,nullable=True)
+    error:Mapped[str]=mapped_column(Text,default='')
+    created_by:Mapped[str]=mapped_column(String(120),default='')
+    created_at:Mapped[str]=mapped_column(String(40))
+    finished_at:Mapped[str]=mapped_column(String(40),default='')
+class MixPublication(Base):
+    __tablename__='mix_publications'
+    __table_args__=(UniqueConstraint('assessment_id','study_id'),UniqueConstraint('assessment_id','version'))
+    id:Mapped[int]=mapped_column(primary_key=True)
+    assessment_id:Mapped[int]=mapped_column(ForeignKey('assessments.id'))
+    study_id:Mapped[int]=mapped_column(ForeignKey('mix_studies.id'))
+    version:Mapped[int]=mapped_column(Integer)
+    report:Mapped[dict]=mapped_column(JSON)
+    fingerprint:Mapped[str]=mapped_column(String(64))
+    stale:Mapped[bool]=mapped_column(Boolean,default=False)
+    published_by:Mapped[str]=mapped_column(String(120),default='')
+    published_at:Mapped[str]=mapped_column(String(40))

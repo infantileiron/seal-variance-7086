@@ -1,0 +1,1 @@
+import{request,post}from'./client.js';export const panel=aid=>request('/assessments/'+aid+'/mix');export const saveBound=(aid,data)=>request('/assessments/'+aid+'/mix-bounds',{method:'PUT',body:JSON.stringify(data)});export const compute=aid=>post('/assessments/'+aid+'/mix-studies',{});export const publish=(aid,sid)=>post('/assessments/'+aid+'/mix-studies/'+sid+'/publish',{});
